@@ -2,6 +2,7 @@ import "jest";
 import * as functions from "firebase-functions-test";
 import * as admin from "firebase-admin";
 import * as myfuncs from "../src";
+import { CreateRecurParams, CreateRecurResponse } from "../src/types/recur";
 
 const testAdmin = functions(
   {
@@ -24,19 +25,23 @@ describe("create recur", () => {
   let subject = testAdmin.wrap(myfuncs.createRecurr);
 
   test("if entity is created", async () => {
-    const params = {
+    const uid = "user12345";
+
+    const params: CreateRecurParams = {
       title: "My own entity",
       duration: 20,
     };
 
-    interface Result {
-      success: boolean;
-      id: string;
-    }
-    const result: Result = await subject(params);
+    const context = {
+      auth: { uid },
+    };
+
+    const result: CreateRecurResponse = await subject(params, context);
     expect(result.success).toBeTruthy();
 
-    const doc = admin.firestore().doc("testing-recurs/" + result.id);
+    const ref = `users/${uid}/recurs/${result.id}`;
+
+    const doc = admin.firestore().doc(ref);
     const docData = await doc.get();
     expect(docData.exists).toBeTruthy();
     expect(docData.data()).toEqual(params);

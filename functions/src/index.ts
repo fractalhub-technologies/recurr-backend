@@ -1,5 +1,6 @@
 import { https, logger } from "firebase-functions";
 import * as admin from "firebase-admin";
+import { CreateRecurParams, CreateRecurResponse } from "../src/types/recur";
 
 admin.initializeApp({ projectId: "fractalhub-612ee" });
 
@@ -14,27 +15,25 @@ export const ping = https.onCall((data, context) => {
   return "pong";
 });
 
-interface Recur {
-  title: string;
-  duration: number;
-}
-
 export const createRecurr = https.onCall(async (data, context) => {
-  const newRecur: Recur = {
+  const newRecur: CreateRecurParams = {
     title: data.title,
     duration: data.duration,
   };
-  logger.info(newRecur);
+  const uid = context.auth?.uid;
+  logger.info("Params", newRecur, uid);
 
   const result = await admin
     .firestore()
-    .collection("testing-recurs")
+    .collection(`users/${uid}/recurs`)
     .add(newRecur);
 
-  logger.info("Created new recur " + result.id);
+  logger.info("Created new recur" + result.id);
 
-  return {
+  const response: CreateRecurResponse = {
     success: true,
     id: result.id,
   };
+
+  return response;
 });
