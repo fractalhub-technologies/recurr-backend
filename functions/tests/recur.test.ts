@@ -6,8 +6,9 @@ import {
   CreateRecurParams,
   CreateRecurResponse,
   Recur,
+  UpdateRecurParams,
 } from "../src/types/recur";
-import { __clearAllDataOnEmulator__ } from "./utils";
+import { __clearAllDataOnEmulator__ } from "./utils/db";
 
 const testAdmin = functions(
   {
@@ -22,17 +23,20 @@ afterEach(async () => {
   await __clearAllDataOnEmulator__();
 });
 
-describe("test test", () => {
-  let subject = testAdmin.wrap(myfuncs.ping);
-
-  test("test 1", () => {
-    const result = subject({});
-    expect(result).toEqual("pong");
-  });
-});
+const testAuthenticated = (subject: Function, ...args: any[]) => async () => {
+  expect.assertions(1);
+  try {
+    await subject(...args);
+    // This shouldn't execute
+    // expect(false).toBeTruthy();
+  } catch (err) {
+    console.log(subject, err.message);
+    expect(err.message).toEqual("User not logged in");
+  }
+};
 
 describe("create recur", () => {
-  let subject = testAdmin.wrap(myfuncs.createRecurr);
+  let subject = testAdmin.wrap(myfuncs.createRecur);
 
   test("if entity is created", async () => {
     const uid = "user12345";
@@ -49,13 +53,20 @@ describe("create recur", () => {
     const result: CreateRecurResponse = await subject(params, context);
     expect(result.success).toBeTruthy();
 
-    const ref = `users/${uid}/recurs/${result.id}`;
+    const ref = `users/${uid}/recurs/${result.data.id}`;
 
     const doc = db.doc(ref);
     const docData = await doc.get();
     expect(docData.exists).toBeTruthy();
     expect(docData.data()).toEqual(params);
   });
+
+  const params: CreateRecurParams = {
+    title: "My own entity",
+    duration: 20,
+  };
+
+  test("when user context not there", testAuthenticated(subject, params));
 });
 
 describe("get all recurs", () => {
@@ -81,6 +92,8 @@ describe("get all recurs", () => {
     expect(result.data.length).toEqual(3);
     expect(result.data).toEqual(recurs);
   });
+
+  test("when user context not there", testAuthenticated(subject, {}));
 });
 
 describe("delete recur", () => {
@@ -105,6 +118,11 @@ describe("delete recur", () => {
     const recur = await db.collection(`users/${uid}/recurs`).get();
     expect(recur.empty).toBeTruthy();
   });
+
+  test(
+    "when user context not there",
+    testAuthenticated(subject, { id: "12345" }),
+  );
 });
 
 describe("update recur", () => {
@@ -124,16 +142,24 @@ describe("update recur", () => {
       title: "Recur has been updated",
       duration: 20,
     };
-    const data = { id: targetId, updateData };
+    const data: UpdateRecurParams = { id: targetId, updateData };
     const context = { auth: { uid } };
 
     const response = await subject(data, context);
     expect(response.success).toBeTruthy();
 
-    const updatedRecur = await (
-      await db.doc(`users/${uid}/recurs/${targetId}`).get()
-    ).data();
-    expect(updatedRecur.title).toEqual(updateData.title);
-    expect(updatedRecur.duration).toEqual(updateData.duration);
+    const doc = await db.doc(`users/${uid}/recurs/${targetId}`).get();
+    const updatedRecur = doc.data();
+    expect(updatedRecur).toBeDefined();
+    expect(updatedRecur?.title).toEqual(updateData.title);
+    expect(updatedRecur?.duration).toEqual(updateData.duration);
   });
+
+  test(
+    "when user context not there",
+    testAuthenticated(subject, {
+      id: "12345",
+      updateData: { title: "No please" },
+    }),
+  );
 });
