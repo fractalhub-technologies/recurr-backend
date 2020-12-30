@@ -1,7 +1,7 @@
 // Model Schema on document
 export interface Recur {
   title: string;
-  duration: string;
+  duration: number;
 }
 
 export interface CreateRecurParams {
@@ -12,4 +12,9 @@ export interface CreateRecurParams {
 export interface CreateRecurResponse {
   success: boolean;
   id: string;
+}
+
+export interface ListRecurResponse {
+  success: boolean;
+  data: Recur[];
 }
