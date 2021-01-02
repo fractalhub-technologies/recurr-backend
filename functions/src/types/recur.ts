@@ -2,6 +2,7 @@
 export interface Recur {
   title: string;
   duration: number;
+  type?: "personal" | "group";
 }
 
 export interface Response {

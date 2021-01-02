@@ -5,10 +5,13 @@ import * as myfuncs from "../src";
 import {
   CreateRecurParams,
   CreateRecurResponse,
+  ListRecurResponse,
   Recur,
   UpdateRecurParams,
 } from "../src/types/recur";
 import { __clearAllDataOnEmulator__ } from "./utils/db";
+import { testFirebaseError } from "./utils/response";
+import * as c from "../src/constants";
 
 const testAdmin = functions(
   {
@@ -23,132 +26,187 @@ afterEach(async () => {
   await __clearAllDataOnEmulator__();
 });
 
-const testAuthenticated = (subject: Function, ...args: any[]) => async () => {
-  expect.assertions(1);
-  try {
-    await subject(...args);
-    // This shouldn't execute
-    // expect(false).toBeTruthy();
-  } catch (err) {
-    console.log(subject, err.message);
-    expect(err.message).toEqual("User not logged in");
+const createTestUser = async (uid: string) => {
+  await db.doc(`users/${uid}`).create({
+    recurs: [],
+  });
+};
+
+const createTestRecurs = async (
+  recurs: Recur[],
+  uid: string,
+): Promise<string[]> => {
+  let ids: string[] = [];
+  for (const recur of recurs) {
+    const recurResult = await db.collection("recurs").add(recur);
+    await db.doc(`users/${uid}`).update({
+      recurs: admin.firestore.FieldValue.arrayUnion(recurResult.id),
+    });
+    ids.push(recurResult.id);
   }
+  return ids;
+};
+
+const getUserRecurs = async (uid: string) => {
+  const usersRecurs = await db.doc(`users/${uid}`).get();
+  return usersRecurs.data()?.recurs;
 };
 
 describe("create recur", () => {
   let subject = testAdmin.wrap(myfuncs.createRecur);
+  const uid = "test-user-create-recur";
+  const context = {
+    auth: { uid },
+  };
+  const params: CreateRecurParams = {
+    title: "My first entity",
+    duration: 10,
+  };
+
+  beforeEach(async () => {
+    await createTestUser(uid);
+  });
+
+  test(
+    "when user context not there",
+    testFirebaseError(c.errMessages.notLoggedIn, subject, params),
+  );
 
   test("if entity is created", async () => {
-    const uid = "user12345";
-
-    const params: CreateRecurParams = {
-      title: "My own entity",
-      duration: 20,
-    };
-
-    const context = {
-      auth: { uid },
-    };
-
     const result: CreateRecurResponse = await subject(params, context);
     expect(result.success).toBeTruthy();
 
-    const ref = `users/${uid}/recurs/${result.data.id}`;
+    const newRecur = await db.doc(`recurs/${result.data.id}`).get();
+    expect(newRecur.exists).toBeTruthy();
+    expect(newRecur.data()?.title).toEqual(params.title);
+    expect(newRecur.data()?.duration).toEqual(params.duration);
+    expect(newRecur.data()?.type).toEqual("personal");
 
-    const doc = db.doc(ref);
-    const docData = await doc.get();
-    expect(docData.exists).toBeTruthy();
-    expect(docData.data()).toEqual(params);
+    const usersRecurs = await getUserRecurs(uid);
+    expect(usersRecurs).toEqual([result.data.id]);
   });
 
-  const params: CreateRecurParams = {
-    title: "My own entity",
-    duration: 20,
-  };
+  test("when two entities are created", async () => {
+    const secondParams: CreateRecurParams = {
+      title: "My second entity",
+      duration: 20,
+    };
 
-  test("when user context not there", testAuthenticated(subject, params));
+    const firstRes: CreateRecurResponse = await subject(params, context);
+    expect(firstRes.success).toBeTruthy();
+
+    const secondRes: CreateRecurResponse = await subject(secondParams, context);
+    expect(secondRes.success).toBeTruthy();
+
+    const usersRecurs = await getUserRecurs(uid);
+    const expected = [firstRes.data.id, secondRes.data.id];
+    expect(usersRecurs).toEqual(expected);
+  });
 });
 
 describe("get all recurs", () => {
   let subject = testAdmin.wrap(myfuncs.getAllRecurs);
-  const uid = "user-all-123";
+  const uid = "test-user-all-recurs";
   const recurs: Recur[] = [
     { title: "Recur 1", duration: 10 },
     { title: "Recur 2", duration: 20 },
     { title: "Recur 3", duration: 30 },
   ];
 
-  beforeAll(async () => {
-    for (const recur of recurs) {
-      await db.collection(`users/${uid}/recurs`).add(recur);
-    }
-  });
-
-  test("should return all recurs for the user", async () => {
-    const context = { auth: { uid } };
-    const result = await subject({}, context);
-
-    expect(result.success).toBeTruthy();
-    expect(result.data.length).toEqual(3);
-    expect(result.data).toEqual(recurs);
-  });
-
-  test("when user context not there", testAuthenticated(subject, {}));
-});
-
-describe("delete recur", () => {
-  let subject = testAdmin.wrap(myfuncs.deleteRecur);
-  const uid = "user-delete-123";
-
-  const recur: Recur = { title: "Recur to be deleted", duration: 10 };
-  let targetId: string;
-
-  beforeAll(async () => {
-    const result = await db.collection(`users/${uid}/recurs`).add(recur);
-    targetId = result.id;
-  });
-
-  test("recur should be deleted", async () => {
-    const data = { id: targetId };
-    const context = { auth: { uid } };
-
-    const response = await subject(data, context);
-    expect(response.success).toBeTruthy();
-
-    const recur = await db.collection(`users/${uid}/recurs`).get();
-    expect(recur.empty).toBeTruthy();
+  beforeEach(async () => {
+    await createTestUser(uid);
   });
 
   test(
     "when user context not there",
-    testAuthenticated(subject, { id: "12345" }),
+    testFirebaseError(c.errMessages.notLoggedIn, subject, {}),
+  );
+
+  test("should return all recurs for the user", async () => {
+    const createdIds = await createTestRecurs(recurs, uid);
+    const context = { auth: { uid } };
+    const result: ListRecurResponse = await subject({}, context);
+
+    expect(result.success).toBeTruthy();
+    expect(result.data.length).toEqual(3);
+    const resultIds = result.data.map((r) => r.id).sort();
+    expect(resultIds).toEqual(createdIds.sort());
+  });
+});
+
+describe("delete recur", () => {
+  let subject = testAdmin.wrap(myfuncs.deleteRecur);
+  const uid = "test-user-delete-recur";
+  const context = { auth: { uid } };
+  const recurs: Recur[] = [
+    { title: "Recur 1", duration: 10 },
+    { title: "Recur 2", duration: 20 },
+  ];
+  let createdIds: string[];
+
+  beforeEach(async () => {
+    await createTestUser(uid);
+    createdIds = await createTestRecurs(recurs, uid);
+  });
+
+  test(
+    "when user context not there",
+    testFirebaseError(c.errMessages.notLoggedIn, subject, { id: "12345" }),
+  );
+
+  test("recur should be deleted", async () => {
+    const data = { id: createdIds[0] };
+
+    const beforeRecurs = await getUserRecurs(uid);
+    expect(beforeRecurs).toEqual(createdIds);
+
+    const recurToBeDeleted = db.doc(`recurs/${createdIds[0]}`);
+    expect((await recurToBeDeleted.get()).exists).toBeTruthy();
+
+    const response = await subject(data, context);
+    expect(response.success).toBeTruthy();
+
+    const afterRecurs = await getUserRecurs(uid);
+    expect(afterRecurs).toEqual([createdIds[1]]);
+    expect((await recurToBeDeleted.get()).exists).toBeFalsy();
+  });
+
+  test(
+    "when user does not own recur",
+    testFirebaseError(
+      c.errMessages.notFound,
+      subject,
+      { id: "random-recur" },
+      context,
+    ),
   );
 });
 
 describe("update recur", () => {
   let subject = testAdmin.wrap(myfuncs.updateRecur);
-  const uid = "user-update-123";
+  const uid = "test-user-update-recur";
+  const context = { auth: { uid } };
 
   const recur: Recur = { title: "Recur to be updated", duration: 10 };
+  const updateData = {
+    title: "Recur has been updated",
+    duration: 20,
+  };
   let targetId: string;
 
-  beforeAll(async () => {
-    const result = await db.collection(`users/${uid}/recurs`).add(recur);
-    targetId = result.id;
+  beforeEach(async () => {
+    await createTestUser(uid);
+    const ids = await createTestRecurs([recur], uid);
+    targetId = ids[0];
   });
 
   test("recur should be updated", async () => {
-    const updateData = {
-      title: "Recur has been updated",
-      duration: 20,
-    };
     const data: UpdateRecurParams = { id: targetId, updateData };
-    const context = { auth: { uid } };
 
     const response = await subject(data, context);
     expect(response.success).toBeTruthy();
 
-    const doc = await db.doc(`users/${uid}/recurs/${targetId}`).get();
+    const doc = await db.doc(`/recurs/${targetId}`).get();
     const updatedRecur = doc.data();
     expect(updatedRecur).toBeDefined();
     expect(updatedRecur?.title).toEqual(updateData.title);
@@ -157,9 +215,19 @@ describe("update recur", () => {
 
   test(
     "when user context not there",
-    testAuthenticated(subject, {
+    testFirebaseError(c.errMessages.notLoggedIn, subject, {
       id: "12345",
       updateData: { title: "No please" },
     }),
+  );
+
+  test(
+    "when user does not own recur",
+    testFirebaseError(
+      c.errMessages.notFound,
+      subject,
+      { id: "random-recur", updateData },
+      context,
+    ),
   );
 });

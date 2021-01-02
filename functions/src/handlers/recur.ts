@@ -1,49 +1,38 @@
 import { https, logger } from "firebase-functions";
 import * as admin from "firebase-admin";
-import {
-  CreateRecurParams,
-  CreateRecurResponse,
-  ListRecurResponse,
-  UpdateRecurParams,
-  Response,
-} from "../types/recur";
+import { Recur, UpdateRecurParams } from "../types/recur";
+import { error, getUidOrThrowError, success } from "../utils/handler";
+import * as c from "../constants";
 
-const getUidOrThrowError = (context: https.CallableContext): string => {
-  const uid = context.auth?.uid;
-
-  if (!uid) {
-    throw new https.HttpsError("unauthenticated", "User not logged in");
-  }
-
-  return uid;
-};
+const db = admin.firestore();
+const { arrayUnion, arrayRemove } = admin.firestore.FieldValue;
+const { documentId } = admin.firestore.FieldPath;
 
 /**
  * CREATE RECUR
  */
 export const create = https.onCall(async (data, context) => {
-  const newRecur: CreateRecurParams = {
+  const uid = getUidOrThrowError(context);
+  const newRecur: Recur = {
     title: data.title,
     duration: data.duration,
+    type: "personal",
   };
-  const uid = getUidOrThrowError(context);
+  logger.info("Creating new recur", newRecur, uid);
 
-  logger.info("Params", newRecur, uid);
-
-  const result = await admin
-    .firestore()
-    .collection(`users/${uid}/recurs`)
-    .add(newRecur);
-
-  logger.info("Created new recur" + result.id);
-
-  const response: CreateRecurResponse = {
-    success: true,
-    data: {
-      id: result.id,
-    },
-  };
-  return response;
+  try {
+    const recurResult = await db.collection("recurs").add(newRecur);
+    await db.doc(`users/${uid}`).update({
+      recurs: arrayUnion(recurResult.id),
+    });
+    return success({ id: recurResult.id });
+  } catch (error) {
+    logger.error("error while creating recur", error);
+    throw new https.HttpsError(
+      "internal",
+      "Internal Server Error while writing",
+    );
+  }
 });
 
 /**
@@ -52,21 +41,38 @@ export const create = https.onCall(async (data, context) => {
 export const getAll = https.onCall(async (_, context) => {
   const uid = getUidOrThrowError(context);
 
-  const results = await admin
-    .firestore()
-    .collection(`users/${uid}/recurs`)
-    .orderBy("title")
-    .get();
+  try {
+    const userDoc = await db.doc(`users/${uid}`).get();
+    const userRecurs = userDoc.data()?.recurs;
+    const recursDoc = await db
+      .collection("recurs")
+      .where(documentId(), "in", userRecurs)
+      .get();
+    const recurs = recursDoc.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
 
-  const recurs = results.docs.map((doc) => doc.data());
-
-  const response: ListRecurResponse = {
-    success: true,
-    data: recurs,
-  };
-
-  return response;
+    return success(recurs);
+  } catch (error) {
+    logger.error("error while gettnig recurs", error);
+    throw new https.HttpsError(
+      "internal",
+      "Internal Server Error while reading",
+    );
+  }
 });
+
+export const throwErrorIfRecurIsNotOwnedByUser = async (
+  recurId: string,
+  uid: string,
+) => {
+  const user = await db.doc(`users/${uid}`).get();
+  const userRecurs: string[] = user.data()?.recurs;
+  if (!userRecurs.includes(recurId)) {
+    throw new https.HttpsError("not-found", c.errMessages.notFound);
+  }
+};
 
 /**
  * DELETE RECUR
@@ -74,14 +80,18 @@ export const getAll = https.onCall(async (_, context) => {
 export const deleteRecur = https.onCall(async (data, context) => {
   const uid = getUidOrThrowError(context);
   const recurID = data.id;
-  const ref = `users/${uid}/recurs/${recurID}`;
+
+  await throwErrorIfRecurIsNotOwnedByUser(recurID, uid);
 
   try {
-    await admin.firestore().doc(ref).delete();
+    await db.doc(`recurs/${recurID}`).delete();
+    await db.doc(`users/${uid}`).update({
+      recurs: arrayRemove(recurID),
+    });
     return success();
   } catch (err) {
-    logger.error("Error while deleting: ", err);
-    return error("error-while-deleting");
+    logger.error(`Error while deleting recur`, error);
+    throw new https.HttpsError("internal", "Internal Server Error");
   }
 });
 
@@ -91,12 +101,14 @@ export const deleteRecur = https.onCall(async (data, context) => {
 export const update = https.onCall(async (data: UpdateRecurParams, context) => {
   const uid = getUidOrThrowError(context);
   const { id, updateData } = data;
-  const ref = `users/${uid}/recurs/${id}`;
 
-  await admin.firestore().doc(ref).update(updateData);
+  await throwErrorIfRecurIsNotOwnedByUser(id, uid);
 
-  return success();
+  try {
+    await db.doc(`recurs/${id}`).update(updateData);
+    return success();
+  } catch (err) {
+    logger.error(`Error while updating recur`, error);
+    throw new https.HttpsError("internal", "Internal Server Error");
+  }
 });
-
-const success = (): Response => ({ success: true });
-const error = (err: string): Response => ({ success: false, error: err });

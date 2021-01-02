@@ -9,7 +9,7 @@
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "test": "jest --watchAll"
+    "test": "export FIRESTORE_EMULATOR_HOST=\"localhost:8080\"; jest --watchAll"
   },
   "engines": {
     "node": "12"
