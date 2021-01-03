@@ -9,7 +9,11 @@ import {
   Recur,
   UpdateRecurParams,
 } from "../src/types/recur";
-import { __clearAllDataOnEmulator__ } from "./utils/db";
+import {
+  __clearAllDataOnEmulator__,
+  createTestUser,
+  createTestRecurs,
+} from "./utils/db";
 import { testFirebaseError } from "./utils/response";
 import * as c from "../src/constants";
 
@@ -25,27 +29,6 @@ const db = admin.firestore();
 afterEach(async () => {
   await __clearAllDataOnEmulator__();
 });
-
-const createTestUser = async (uid: string) => {
-  await db.doc(`users/${uid}`).create({
-    recurs: [],
-  });
-};
-
-const createTestRecurs = async (
-  recurs: Recur[],
-  uid: string,
-): Promise<string[]> => {
-  let ids: string[] = [];
-  for (const recur of recurs) {
-    const recurResult = await db.collection("recurs").add(recur);
-    await db.doc(`users/${uid}`).update({
-      recurs: admin.firestore.FieldValue.arrayUnion(recurResult.id),
-    });
-    ids.push(recurResult.id);
-  }
-  return ids;
-};
 
 const getUserRecurs = async (uid: string) => {
   const usersRecurs = await db.doc(`users/${uid}`).get();

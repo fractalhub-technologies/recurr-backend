@@ -2,7 +2,7 @@ import { https, logger } from "firebase-functions";
 import * as admin from "firebase-admin";
 import { Recur, UpdateRecurParams } from "../types/recur";
 import { error, getUidOrThrowError, success } from "../utils/handler";
-import * as c from "../constants";
+import { throwErrorIfRecurIsNotOwnedByUser } from "../domain/recur";
 
 const db = admin.firestore();
 const { arrayUnion, arrayRemove } = admin.firestore.FieldValue;
@@ -62,17 +62,6 @@ export const getAll = https.onCall(async (_, context) => {
     );
   }
 });
-
-export const throwErrorIfRecurIsNotOwnedByUser = async (
-  recurId: string,
-  uid: string,
-) => {
-  const user = await db.doc(`users/${uid}`).get();
-  const userRecurs: string[] = user.data()?.recurs;
-  if (!userRecurs.includes(recurId)) {
-    throw new https.HttpsError("not-found", c.errMessages.notFound);
-  }
-};
 
 /**
  * DELETE RECUR

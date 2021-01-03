@@ -1,12 +1,12 @@
 import { https, logger } from "firebase-functions";
 import * as admin from "firebase-admin";
-import { error, getUidOrThrowError, success } from "../utils/handler";
+import { getUidOrThrowError, success } from "../utils/handler";
 import { throwErrorIfRecurIsNotOwnedByUser } from "../domain/recur";
 const db = admin.firestore();
 
-export const checkIn = https.onCall(async (data, context) => {
+export const inRecur = https.onCall(async (data, context) => {
   const uid = getUidOrThrowError(context);
-  const { recurId } = data;
+  const { recurId, timestamp } = data;
 
   await throwErrorIfRecurIsNotOwnedByUser(recurId, uid);
 
@@ -16,7 +16,7 @@ export const checkIn = https.onCall(async (data, context) => {
     const ref = `recurs/${recurId}/checkins/${uid}_${datestamp}`;
     await db.doc(ref).set({
       uid,
-      date: new Date().toISOString(),
+      timestamp,
     });
     return success();
   } catch (error) {
