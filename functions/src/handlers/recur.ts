@@ -26,8 +26,8 @@ export const create = https.onCall(async (data, context) => {
       recurs: arrayUnion(recurResult.id),
     });
     return success({ id: recurResult.id });
-  } catch (error) {
-    logger.error("error while creating recur", error);
+  } catch (err) {
+    logger.error("error while creating recur", err);
     throw new https.HttpsError(
       "internal",
       "Internal Server Error while writing",
@@ -54,8 +54,8 @@ export const getAll = https.onCall(async (_, context) => {
     }));
 
     return success(recurs);
-  } catch (error) {
-    logger.error("error while gettnig recurs", error);
+  } catch (err) {
+    logger.error("error while gettnig recurs", err);
     throw new https.HttpsError(
       "internal",
       "Internal Server Error while reading",
