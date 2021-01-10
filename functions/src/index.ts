@@ -5,6 +5,7 @@ admin.initializeApp({ projectId: "fractalhub-612ee" });
 
 // handlers
 import * as recur from "./handlers/recur";
+import * as user from "./handlers/user";
 import * as check from "./handlers/checkin";
 
 export const ping = https.onCall((data, context) => {
@@ -18,3 +19,5 @@ export const updateRecur = recur.update;
 export const deleteRecur = recur.deleteRecur;
 // checins
 export const checkInRecur = check.inRecur;
+// user
+export const onUserCreate = user.create;

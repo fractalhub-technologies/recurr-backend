@@ -20,7 +20,7 @@ import * as c from "../src/constants";
 const testAdmin = functions(
   {
     projectId: "fractalhub-612ee",
-    databaseURL: "http://localhost:900",
+    databaseURL: "http://localhost:9000",
   },
   "./key.json",
 );
