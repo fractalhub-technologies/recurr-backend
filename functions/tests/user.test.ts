@@ -7,7 +7,7 @@ const testAdmin = functions(
     projectId: "fractalhub-612ee",
     databaseURL: "http://localhost:9000",
   },
-  "./key.json",
+  "./key.json"
 );
 
 import { onUserCreate } from "../src";
@@ -26,8 +26,8 @@ describe("when user is created", () => {
 
     const user = await firestore().doc(`users/${uid}`).get();
     expect(user.exists).toBeTruthy();
-    const createdAt = user.data().createdAt;
+    const createdAt = user.data()?.createdAt;
     expect(new Date(createdAt).toString()).not.toEqual("Invalid Date");
-    expect(user.data().score).toBe(0);
+    expect(user.data()?.score).toBe(0);
   });
 });

@@ -15,9 +15,9 @@ import * as c from "../src/constants";
 const testAdmin = functions(
   {
     projectId: "fractalhub-612ee",
-    databaseURL: "http://localhost:900",
+    databaseURL: "http://localhost:9000",
   },
-  "./key.json",
+  "./key.json"
 );
 const db = admin.firestore();
 
@@ -38,7 +38,7 @@ describe("check in recur", () => {
 
   test(
     "when user is not authenticated",
-    testFirebaseError(c.errMessages.notLoggedIn, subject, {}),
+    testFirebaseError(c.errMessages.notLoggedIn, subject, {})
   );
 
   test(
@@ -47,8 +47,8 @@ describe("check in recur", () => {
       c.errMessages.notFound,
       subject,
       { recurId: "dummy", timestamp },
-      context,
-    ),
+      context
+    )
   );
 
   test("should create a checkin entry", async () => {

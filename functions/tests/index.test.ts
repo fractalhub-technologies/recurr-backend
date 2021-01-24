@@ -5,9 +5,9 @@ import * as myfuncs from "../src";
 const testAdmin = functions(
   {
     projectId: "fractalhub-612ee",
-    databaseURL: "http://localhost:900",
+    databaseURL: "http://localhost:9000",
   },
-  "./key.json",
+  "./key.json"
 );
 
 describe("test test", () => {
