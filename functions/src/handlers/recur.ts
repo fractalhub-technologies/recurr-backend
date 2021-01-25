@@ -11,7 +11,8 @@ const { documentId } = admin.firestore.FieldPath;
 /**
  * CREATE RECUR
  */
-export const create = https.onCall(async (data, context) => {
+
+export const create = async (data: any, context: any) => {
   const uid = getUidOrThrowError(context);
   const newRecur: Recur = {
     title: data.title,
@@ -22,6 +23,7 @@ export const create = https.onCall(async (data, context) => {
 
   try {
     const recurResult = await db.collection("recurs").add(newRecur);
+
     await db.doc(`users/${uid}`).update({
       recurs: arrayUnion(recurResult.id),
     });
@@ -30,15 +32,15 @@ export const create = https.onCall(async (data, context) => {
     logger.error("error while creating recur", err);
     throw new https.HttpsError(
       "internal",
-      "Internal Server Error while writing",
+      "Internal Server Error while writing"
     );
   }
-});
+};
 
 /**
  * GET ALL RECUR
  */
-export const getAll = https.onCall(async (_, context) => {
+export const getAll = async (_: any, context: any) => {
   const uid = getUidOrThrowError(context);
 
   try {
@@ -58,15 +60,15 @@ export const getAll = https.onCall(async (_, context) => {
     logger.error("error while gettnig recurs", err);
     throw new https.HttpsError(
       "internal",
-      "Internal Server Error while reading",
+      "Internal Server Error while reading"
     );
   }
-});
+};
 
 /**
  * DELETE RECUR
  */
-export const deleteRecur = https.onCall(async (data, context) => {
+export const deleteRecur = async (data: any, context: any) => {
   const uid = getUidOrThrowError(context);
   const recurID = data.id;
 
@@ -82,12 +84,12 @@ export const deleteRecur = https.onCall(async (data, context) => {
     logger.error(`Error while deleting recur`, error);
     throw new https.HttpsError("internal", "Internal Server Error");
   }
-});
+};
 
 /**
  * UPDATE RECUR
  */
-export const update = https.onCall(async (data: UpdateRecurParams, context) => {
+export const update = async (data: UpdateRecurParams, context: any) => {
   const uid = getUidOrThrowError(context);
   const { id, updateData } = data;
 
@@ -100,4 +102,4 @@ export const update = https.onCall(async (data: UpdateRecurParams, context) => {
     logger.error(`Error while updating recur`, error);
     throw new https.HttpsError("internal", "Internal Server Error");
   }
-});
+};

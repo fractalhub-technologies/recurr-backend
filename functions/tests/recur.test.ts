@@ -22,7 +22,7 @@ const testAdmin = functions(
     projectId: "fractalhub-612ee",
     databaseURL: "http://localhost:9000",
   },
-  "./key.json",
+  "./key.json"
 );
 const db = admin.firestore();
 
@@ -36,15 +36,17 @@ const getUserRecurs = async (uid: string) => {
 };
 
 describe("create recur", () => {
-  let subject = testAdmin.wrap(myfuncs.createRecur);
+  let subject = testAdmin.wrap(myfuncs.dispatch);
   const uid = "test-user-create-recur";
   const context = {
     auth: { uid },
   };
-  const params: CreateRecurParams = {
+  const payload: CreateRecurParams = {
     title: "My first entity",
     duration: 10,
   };
+
+  const params: any = [["CREATE_RECUR", payload]];
 
   beforeEach(async () => {
     await createTestUser(uid);
@@ -52,7 +54,7 @@ describe("create recur", () => {
 
   test(
     "when user context not there",
-    testFirebaseError(c.errMessages.notLoggedIn, subject, params),
+    testFirebaseError(c.errMessages.notLoggedIn, subject, params)
   );
 
   test("if entity is created", async () => {
@@ -70,10 +72,12 @@ describe("create recur", () => {
   });
 
   test("when two entities are created", async () => {
-    const secondParams: CreateRecurParams = {
+    const payload: CreateRecurParams = {
       title: "My second entity",
       duration: 20,
     };
+
+    const secondParams: any = [["CREATE_RECUR", payload]];
 
     const firstRes: CreateRecurResponse = await subject(params, context);
     expect(firstRes.success).toBeTruthy();
@@ -88,7 +92,7 @@ describe("create recur", () => {
 });
 
 describe("get all recurs", () => {
-  let subject = testAdmin.wrap(myfuncs.getAllRecurs);
+  let subject = testAdmin.wrap(myfuncs.dispatch);
   const uid = "test-user-all-recurs";
   const recurs: Recur[] = [
     { title: "Recur 1", duration: 10 },
@@ -102,7 +106,7 @@ describe("get all recurs", () => {
 
   test(
     "when user context not there",
-    testFirebaseError(c.errMessages.notLoggedIn, subject, {}),
+    testFirebaseError(c.errMessages.notLoggedIn, subject, {})
   );
 
   test("should return all recurs for the user", async () => {
@@ -118,7 +122,7 @@ describe("get all recurs", () => {
 });
 
 describe("delete recur", () => {
-  let subject = testAdmin.wrap(myfuncs.deleteRecur);
+  let subject = testAdmin.wrap(myfuncs.dispatch);
   const uid = "test-user-delete-recur";
   const context = { auth: { uid } };
   const recurs: Recur[] = [
@@ -134,7 +138,7 @@ describe("delete recur", () => {
 
   test(
     "when user context not there",
-    testFirebaseError(c.errMessages.notLoggedIn, subject, { id: "12345" }),
+    testFirebaseError(c.errMessages.notLoggedIn, subject, { id: "12345" })
   );
 
   test("recur should be deleted", async () => {
@@ -160,13 +164,13 @@ describe("delete recur", () => {
       c.errMessages.notFound,
       subject,
       { id: "random-recur" },
-      context,
-    ),
+      context
+    )
   );
 });
 
 describe("update recur", () => {
-  let subject = testAdmin.wrap(myfuncs.updateRecur);
+  let subject = testAdmin.wrap(myfuncs.dispatch);
   const uid = "test-user-update-recur";
   const context = { auth: { uid } };
 
@@ -201,7 +205,7 @@ describe("update recur", () => {
     testFirebaseError(c.errMessages.notLoggedIn, subject, {
       id: "12345",
       updateData: { title: "No please" },
-    }),
+    })
   );
 
   test(
@@ -210,7 +214,7 @@ describe("update recur", () => {
       c.errMessages.notFound,
       subject,
       { id: "random-recur", updateData },
-      context,
-    ),
+      context
+    )
   );
 });
