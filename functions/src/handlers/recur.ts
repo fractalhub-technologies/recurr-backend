@@ -42,7 +42,6 @@ export const create = async (data: any, context: any) => {
  */
 export const getAll = async (_: any, context: any) => {
   const uid = getUidOrThrowError(context);
-
   try {
     const userDoc = await db.doc(`users/${uid}`).get();
     const userRecurs = userDoc.data()?.recurs;
@@ -57,7 +56,7 @@ export const getAll = async (_: any, context: any) => {
 
     return success(recurs);
   } catch (err) {
-    logger.error("error while gettnig recurs", err);
+    logger.error("error while getting recurs", err);
     throw new https.HttpsError(
       "internal",
       "Internal Server Error while reading"

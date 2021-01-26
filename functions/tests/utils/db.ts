@@ -4,7 +4,7 @@ import { Recur } from "../../src/types/recur";
 
 export async function __clearAllDataOnEmulator__() {
   return axios.delete(
-    "http://localhost:8080/emulator/v1/projects/fractalhub-612ee/databases/(default)/documents",
+    "http://localhost:8080/emulator/v1/projects/fractalhub-612ee/databases/(default)/documents"
   );
 }
 
@@ -16,7 +16,7 @@ export const createTestUser = async (uid: string) => {
 
 export const createTestRecurs = async (
   recurs: Recur[],
-  uid: string,
+  uid: string
 ): Promise<string[]> => {
   let ids: string[] = [];
   for (const recur of recurs) {

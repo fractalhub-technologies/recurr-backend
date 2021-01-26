@@ -63,8 +63,8 @@ describe("create recur", () => {
 
     const newRecur = await db.doc(`recurs/${result.data.id}`).get();
     expect(newRecur.exists).toBeTruthy();
-    expect(newRecur.data()?.title).toEqual(params.title);
-    expect(newRecur.data()?.duration).toEqual(params.duration);
+    expect(newRecur.data()?.title).toEqual(payload.title);
+    expect(newRecur.data()?.duration).toEqual(payload.duration);
     expect(newRecur.data()?.type).toEqual("personal");
 
     const usersRecurs = await getUserRecurs(uid);
@@ -112,7 +112,7 @@ describe("get all recurs", () => {
   test("should return all recurs for the user", async () => {
     const createdIds = await createTestRecurs(recurs, uid);
     const context = { auth: { uid } };
-    const result: ListRecurResponse = await subject({}, context);
+    const result: ListRecurResponse = await subject([], context);
 
     expect(result.success).toBeTruthy();
     expect(result.data.length).toEqual(3);
@@ -138,11 +138,14 @@ describe("delete recur", () => {
 
   test(
     "when user context not there",
-    testFirebaseError(c.errMessages.notLoggedIn, subject, { id: "12345" })
+    testFirebaseError(c.errMessages.notLoggedIn, subject, [
+      ["DELETE_RECUR", { id: "12345" }],
+    ])
   );
 
   test("recur should be deleted", async () => {
     const data = { id: createdIds[0] };
+    const payload = [["DELETE_RECUR", data]];
 
     const beforeRecurs = await getUserRecurs(uid);
     expect(beforeRecurs).toEqual(createdIds);
@@ -150,7 +153,7 @@ describe("delete recur", () => {
     const recurToBeDeleted = db.doc(`recurs/${createdIds[0]}`);
     expect((await recurToBeDeleted.get()).exists).toBeTruthy();
 
-    const response = await subject(data, context);
+    const response = await subject(payload, context);
     expect(response.success).toBeTruthy();
 
     const afterRecurs = await getUserRecurs(uid);
@@ -163,7 +166,7 @@ describe("delete recur", () => {
     testFirebaseError(
       c.errMessages.notFound,
       subject,
-      { id: "random-recur" },
+      [["DELETE_RECUR", { id: "12345" }]],
       context
     )
   );
@@ -189,8 +192,9 @@ describe("update recur", () => {
 
   test("recur should be updated", async () => {
     const data: UpdateRecurParams = { id: targetId, updateData };
+    const params = [["UPDATE_RECUR", data]];
 
-    const response = await subject(data, context);
+    const response = await subject(params, context);
     expect(response.success).toBeTruthy();
 
     const doc = await db.doc(`/recurs/${targetId}`).get();
@@ -202,10 +206,15 @@ describe("update recur", () => {
 
   test(
     "when user context not there",
-    testFirebaseError(c.errMessages.notLoggedIn, subject, {
-      id: "12345",
-      updateData: { title: "No please" },
-    })
+    testFirebaseError(c.errMessages.notLoggedIn, subject, [
+      [
+        "UPDATE_RECUR",
+        {
+          id: "12345",
+          updateData: { title: "No please" },
+        },
+      ],
+    ])
   );
 
   test(
@@ -213,7 +222,7 @@ describe("update recur", () => {
     testFirebaseError(
       c.errMessages.notFound,
       subject,
-      { id: "random-recur", updateData },
+      [["UPDATE_RECUR", { id: "random-recur", updateData }]],
       context
     )
   );
