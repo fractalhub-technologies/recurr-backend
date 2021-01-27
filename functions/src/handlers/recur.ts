@@ -1,14 +1,13 @@
-import { logger } from "firebase-functions";
+import { https, logger } from "firebase-functions";
 import { Recur, UpdateRecurParams } from "../types/recur";
 import { getUidOrThrowError } from "../utils/handler";
-import { throwErrorIfRecurIsNotOwnedByUser } from "../domain/recur";
-
 import {
+  throwErrorIfRecurIsNotOwnedByUser,
   storeRecurInDB,
   getAllRecur,
   deleteRecurFromDB,
   updateRecurInDB,
-} from "../domain/db";
+} from "../domain/recur";
 
 /**
  * CREATE RECUR
@@ -24,7 +23,12 @@ export const create = async (data: any, context: any) => {
 
   logger.info("Creating new recur", newRecur, uid);
 
-  return storeRecurInDB(newRecur, uid);
+  const result = storeRecurInDB(newRecur, uid);
+  if ((await result).success) {
+    return result;
+  }
+  logger.error("error while creating recur", (await result).error);
+  throw new https.HttpsError("internal", "Internal Server Error while writing");
 };
 /**
  * GET ALL RECUR
@@ -34,7 +38,13 @@ export const getAll = async (_: any, context: any) => {
 
   logger.info("Getting recurs", uid);
 
-  return getAllRecur(uid);
+  const data = getAllRecur(uid);
+
+  if ((await data).success) {
+    return data;
+  }
+  logger.error("error while getting recurs", (await data).error);
+  throw new https.HttpsError("internal", "Internal Server Error while reading");
 };
 
 /**
@@ -50,7 +60,13 @@ export const deleteRecur = async (data: any, context: any) => {
 
   const recurDetails = { uid, recurID };
 
-  return deleteRecurFromDB(recurDetails);
+  const result = deleteRecurFromDB(recurDetails);
+
+  if ((await result).success) {
+    return result;
+  }
+  logger.error(`Error while deleting recur`, (await result).error);
+  throw new https.HttpsError("internal", "Internal Server Error");
 };
 
 /**
@@ -64,5 +80,10 @@ export const update = async (data: UpdateRecurParams, context: any) => {
 
   logger.info("Updating recur", uid, updateData);
 
-  return updateRecurInDB(id, updateData);
+  const result = updateRecurInDB(id, updateData);
+  if ((await result).success) {
+    return result;
+  }
+  logger.error(`Error while updating recur`, (await result).error);
+  throw new https.HttpsError("internal", "Internal Server Error");
 };
