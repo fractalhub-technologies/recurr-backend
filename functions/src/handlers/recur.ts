@@ -1,12 +1,14 @@
-import { https, logger } from "firebase-functions";
-import * as admin from "firebase-admin";
+import { logger } from "firebase-functions";
 import { Recur, UpdateRecurParams } from "../types/recur";
-import { error, getUidOrThrowError, success } from "../utils/handler";
+import { getUidOrThrowError } from "../utils/handler";
 import { throwErrorIfRecurIsNotOwnedByUser } from "../domain/recur";
 
-const db = admin.firestore();
-const { arrayUnion, arrayRemove } = admin.firestore.FieldValue;
-const { documentId } = admin.firestore.FieldPath;
+import {
+  storeRecurInDB,
+  getAllRecur,
+  deleteRecurFromDB,
+  updateRecurInDB,
+} from "../domain/db";
 
 /**
  * CREATE RECUR
@@ -19,49 +21,20 @@ export const create = async (data: any, context: any) => {
     duration: data.duration,
     type: "personal",
   };
+
   logger.info("Creating new recur", newRecur, uid);
 
-  try {
-    const recurResult = await db.collection("recurs").add(newRecur);
-
-    await db.doc(`users/${uid}`).update({
-      recurs: arrayUnion(recurResult.id),
-    });
-    return success({ id: recurResult.id });
-  } catch (err) {
-    logger.error("error while creating recur", err);
-    throw new https.HttpsError(
-      "internal",
-      "Internal Server Error while writing"
-    );
-  }
+  return storeRecurInDB(newRecur, uid);
 };
-
 /**
  * GET ALL RECUR
  */
 export const getAll = async (_: any, context: any) => {
   const uid = getUidOrThrowError(context);
-  try {
-    const userDoc = await db.doc(`users/${uid}`).get();
-    const userRecurs = userDoc.data()?.recurs;
-    const recursDoc = await db
-      .collection("recurs")
-      .where(documentId(), "in", userRecurs)
-      .get();
-    const recurs = recursDoc.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
 
-    return success(recurs);
-  } catch (err) {
-    logger.error("error while getting recurs", err);
-    throw new https.HttpsError(
-      "internal",
-      "Internal Server Error while reading"
-    );
-  }
+  logger.info("Getting recurs", uid);
+
+  return getAllRecur(uid);
 };
 
 /**
@@ -73,16 +46,11 @@ export const deleteRecur = async (data: any, context: any) => {
 
   await throwErrorIfRecurIsNotOwnedByUser(recurID, uid);
 
-  try {
-    await db.doc(`recurs/${recurID}`).delete();
-    await db.doc(`users/${uid}`).update({
-      recurs: arrayRemove(recurID),
-    });
-    return success();
-  } catch (err) {
-    logger.error(`Error while deleting recur`, error);
-    throw new https.HttpsError("internal", "Internal Server Error");
-  }
+  logger.info("Deleting recur", uid, recurID);
+
+  const recurDetails = { uid, recurID };
+
+  return deleteRecurFromDB(recurDetails);
 };
 
 /**
@@ -94,11 +62,7 @@ export const update = async (data: UpdateRecurParams, context: any) => {
 
   await throwErrorIfRecurIsNotOwnedByUser(id, uid);
 
-  try {
-    await db.doc(`recurs/${id}`).update(updateData);
-    return success();
-  } catch (err) {
-    logger.error(`Error while updating recur`, error);
-    throw new https.HttpsError("internal", "Internal Server Error");
-  }
+  logger.info("Updating recur", uid, updateData);
+
+  return updateRecurInDB(id, updateData);
 };
