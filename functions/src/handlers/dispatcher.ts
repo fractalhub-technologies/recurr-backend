@@ -1,26 +1,21 @@
 import { https, logger } from "firebase-functions";
-import { create, update, getAll, deleteRecur } from "./recur";
-import { success } from "../utils/handler";
+import * as admin from "firebase-admin";
+import { getUidOrThrowError, success } from "../utils/handler";
+
+const db = admin.firestore();
 
 export const dispatch = https.onCall(async (data, context) => {
-  if (data.length > 0) {
-    for (const request of data) {
-      let action = request[0];
-      let payload = request[1];
+  const uid = getUidOrThrowError(context);
 
-      switch (action) {
-        case "CREATE_RECUR":
-          return create(payload, context);
-        case "UPDATE_RECUR":
-          return update(payload, context);
-        case "DELETE_RECUR":
-          return deleteRecur(payload, context);
-        default:
-          logger.info("Invalid action", action);
-          throw new https.HttpsError("invalid-argument", "Invalid action!");
-      }
-    }
-    return success();
+  logger.info("Got data length: ", data.length, " | User: ", uid);
+
+  if (data.length > 0) {
+    logger.debug("Received data", data);
+
+    await db.doc(`users/${uid}`).update({
+      commits: data,
+    });
   }
-  return getAll({}, context);
+
+  return success();
 });
