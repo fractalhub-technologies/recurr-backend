@@ -39,3 +39,9 @@ export interface UpdateRecurParams {
     duration?: number;
   };
 }
+
+export interface Commit {
+  id: number;
+  action: string;
+  payload: any
+}
