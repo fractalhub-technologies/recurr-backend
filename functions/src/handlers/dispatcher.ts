@@ -13,7 +13,7 @@ export const pushCommits = https.onCall(async (data, context) => {
   if (data.length > 0) {
     logger.debug("Received data", data);
 
-    data.length.forEach(async (commit: Commit) => {
+    data.forEach(async (commit: Commit) => {
       try {
         await db.collection(`users/${uid}/commits`).add(commit);
       } catch (err) {
