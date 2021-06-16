@@ -1,18 +1,17 @@
-import { firestore } from "firebase-admin";
+import { auth, firestore } from "firebase-admin";
 
 interface User {
+  email: string;
+  displayName: string;
+  photoURL: string;
   createdAt: string;
-  score: number;
 }
 
 type FsResult = Promise<firestore.WriteResult>;
 
-export function createUser(uid: string): FsResult {
-  const newUser: User = {
-    createdAt: new Date().toISOString(),
-    score: 0,
-  };
-  const newRef = `users/${uid}`;
+export function createUser(user: auth.UserRecord): FsResult {
+  const newUser = user.toJSON();
+  const newRef = `users/${user.uid}`;
 
   return firestore().doc(newRef).set(newUser);
 }
