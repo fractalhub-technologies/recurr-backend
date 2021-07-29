@@ -1,11 +1,13 @@
 import { auth, firestore } from "firebase-admin";
 
+/*
 interface User {
   email: string;
   displayName: string;
   photoURL: string;
   createdAt: string;
 }
+*/
 
 type FsResult = Promise<firestore.WriteResult>;
 
