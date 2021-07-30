@@ -21,3 +21,4 @@ export const onUserCreate = user.create;
 
 // team
 export const onTeamCreate = teams.onTeamCreate;
+export const onMemberAdd = teams.onMemberAdd;
