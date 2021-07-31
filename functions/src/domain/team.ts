@@ -1,8 +1,22 @@
-import { firestore } from "firebase-admin";
+import { messaging, firestore } from "firebase-admin";
+import { logger } from "firebase-functions";
 
-export function addOwnerAsMember(teamID: string, ownerUID: string) {
-  return firestore().collection(`teams/${teamID}/members`).add({
-    uid: ownerUID,
-    addedAt: new Date().toISOString(),
-  })
+const _payload = (team: string) => ({
+  notification: {
+    title: "You were added to a new team 🥳",
+    body: `You are now a part of ${team}`,
+  },
+});
+
+export async function sendMemberAddedNotification(uid: string, team: string) {
+  const user = await firestore().collection("users").doc(uid).get();
+  const data = user.data();
+  if (data) {
+    logger.debug("User tokens: ", data.tokens);
+    await messaging().sendToDevice(data.tokens, _payload(team), {
+      priority: "high",
+    });
+  } else {
+    logger.error("User data not found ", uid);
+  }
 }

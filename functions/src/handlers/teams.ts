@@ -1,5 +1,5 @@
 import { firestore, logger } from "firebase-functions";
-// import { addOwnerAsMember } from "../domain/team";
+import { sendMemberAddedNotification } from "../domain/team";
 
 export const onTeamCreate = firestore
   .document("/teams/{id}")
@@ -24,14 +24,21 @@ export const onMemberAdd = firestore
     const memberRef = snapshot.ref;
     logger.debug("ON MEMBER CREATE", memberData, context.params);
 
+    if (memberData.isOwner) {
+      logger.info("Skipping due to member being owner");
+      return;
+    }
+
     const teamRef = memberRef.parent.parent;
     if (teamRef !== null) {
-      return teamRef
-        .get()
-        .then((pSnapshot) => {
-          const teamData = pSnapshot.data();
-          logger.info("Team parent", teamData);
-        })
+      return teamRef.get().then((team) => {
+        const teamData = team.data();
+        if (teamData) {
+          return sendMemberAddedNotification(memberData.uid, teamData.name);
+        }
+        logger.error("Team data not found", context.params);
+        return null;
+      });
     } else {
       logger.error("TEAM PARENT NULL", context.params);
       return false;
