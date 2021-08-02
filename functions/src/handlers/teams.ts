@@ -1,5 +1,9 @@
-import { firestore, logger } from "firebase-functions";
-import { sendMemberAddedNotification } from "../domain/team";
+import { firestore, https, logger } from "firebase-functions";
+import {
+  sendMemberAddedNotification,
+  sendNudgeNotification,
+} from "../domain/team";
+import { getUidOrThrowError } from "../utils/handler";
 
 export const onTeamCreate = firestore
   .document("/teams/{id}")
@@ -11,7 +15,7 @@ export const onTeamCreate = firestore
 
     return teamRef.collection("members").add({
       _memberTeamID: id,
-      uid: teamData.created_by,
+      uid: teamData.createdBy,
       addedAt: new Date().toISOString(),
       isOwner: true,
     });
@@ -44,3 +48,21 @@ export const onMemberAdd = firestore
       return false;
     }
   });
+
+export const nudgeUser = https.onCall(async (data, context) => {
+  logger.info("Nudging...");
+  getUidOrThrowError(context);
+  const { targetUid, teamName, currentUserName } = data;
+
+  if (!targetUid || !teamName || !currentUserName) {
+    return false;
+  }
+
+  try {
+    await sendNudgeNotification(targetUid, teamName, currentUserName);
+    return true;
+  } catch (err) {
+    logger.error("Error while notifying: ", err);
+    return false;
+  }
+});
