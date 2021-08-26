@@ -1,8 +1,10 @@
 import { firestore, https, logger } from "firebase-functions";
+import { actionNotifications } from "../constants";
 import {
   sendMemberAddedNotification,
   sendNudgeNotification,
   addUserAsOwnerToTeam,
+  sendTeamCommitNotification,
 } from "../domain/team";
 import { getUidOrThrowError } from "../utils/handler";
 
@@ -61,3 +63,18 @@ export const nudgeUser = https.onCall(async (data, context) => {
     return false;
   }
 });
+
+export const onTeamCommit = firestore
+  .document("/teams/{teamID}/commits/{commitID}")
+  .onCreate((snapshot, context) => {
+    const { teamID } = context.params;
+    const commitData = snapshot.data();
+    const { action, payload, user } = commitData;
+    logger.debug("ON TEAM COMMIT", teamID, action, payload);
+
+    if (!Object.keys(actionNotifications).includes(action)) {
+      logger.info("Skipping action cause not present", teamID, action);
+    }
+
+    return sendTeamCommitNotification(teamID, user, action, payload);
+  });
