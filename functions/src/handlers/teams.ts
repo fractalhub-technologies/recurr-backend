@@ -2,6 +2,7 @@ import { firestore, https, logger } from "firebase-functions";
 import {
   sendMemberAddedNotification,
   sendNudgeNotification,
+  addUserAsOwnerToTeam,
 } from "../domain/team";
 import { getUidOrThrowError } from "../utils/handler";
 
@@ -9,16 +10,10 @@ export const onTeamCreate = firestore
   .document("/teams/{id}")
   .onCreate((snapshot, context) => {
     const teamData = snapshot.data();
-    const teamRef = snapshot.ref;
     const id = context.params.id;
     logger.debug("ON TEAM CREATE", id, teamData);
 
-    return teamRef.collection("members").add({
-      _memberTeamID: id,
-      uid: teamData.createdBy,
-      addedAt: new Date().toISOString(),
-      isOwner: true,
-    });
+    return addUserAsOwnerToTeam(id, teamData.createdBy);
   });
 
 export const onMemberAdd = firestore

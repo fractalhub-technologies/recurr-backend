@@ -35,10 +35,25 @@ export async function sendNudgeNotification(
   const user = await firestore().collection("users").doc(uid).get();
   const data = user.data();
   if (data) {
-    await messaging().sendToDevice(data.tokens, _nudgePayload(team, currentUser), {
-      priority: "high",
-    });
+    await messaging().sendToDevice(
+      data.tokens,
+      _nudgePayload(team, currentUser),
+      {
+        priority: "high",
+      }
+    );
   } else {
     logger.error("User data not found ", uid);
   }
+}
+
+export async function addUserAsOwnerToTeam(team: string, uid: string) {
+  const details = {
+    _memberTeamID: team,
+    uid,
+    addedAt: new Date().toISOString(),
+    isOwner: true,
+  };
+
+  await firestore().doc(`/teams/${team}/members/${uid}`).set(details);
 }
