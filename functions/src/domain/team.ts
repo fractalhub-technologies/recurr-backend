@@ -2,11 +2,11 @@ import { messaging, firestore } from "firebase-admin";
 import { logger } from "firebase-functions";
 import * as fcm from "./fcm";
 
-export async function sendMemberAddedNotification(uid: string, team: string) {
+export async function sendMemberAddedNotification(uid: string, teamID: string, teamName: string) {
   const user = await firestore().collection("users").doc(uid).get();
   const data = user.data();
   if (data) {
-    await messaging().sendToDevice(data.tokens, fcm.memberAdded(team), {
+    await messaging().sendToDevice(data.tokens, fcm.memberAdded(teamID, teamName), {
       priority: "high",
     });
   } else {
@@ -79,7 +79,7 @@ export async function sendTeamCommitNotification(
           messaging()
             .sendToDevice(
               data.tokens,
-              fcm.teamAction(firstName, action, teamName),
+              fcm.teamAction(firstName, action, teamName, teamID),
               { priority: "high" }
             )
             .catch((err) => logger.error("Error in send to device ", err));

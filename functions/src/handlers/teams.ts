@@ -34,8 +34,9 @@ export const onMemberAdd = firestore
     if (teamRef !== null) {
       return teamRef.get().then((team) => {
         const teamData = team.data();
+        const teamID = team.id;
         if (teamData) {
-          return sendMemberAddedNotification(memberData.uid, teamData.name);
+          return sendMemberAddedNotification(memberData.uid, teamID, teamData.name);
         }
         logger.error("Team data not found", context.params);
         return null;
