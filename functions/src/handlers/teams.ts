@@ -75,6 +75,7 @@ export const onTeamCommit = firestore
 
     if (!Object.keys(actionNotifications).includes(action)) {
       logger.info("Skipping action cause not present", teamID, action);
+      return;
     }
 
     return sendTeamCommitNotification(teamID, user, action, payload);
