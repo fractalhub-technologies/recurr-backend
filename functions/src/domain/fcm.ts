@@ -1,8 +1,8 @@
-import { actionNotifications } from "../constants";
+import { actionNotifications, LOGO_URL } from "../constants";
 
 const notification = (title: string, subtitle: string, data: any = {}) => ({
   notification: {
-    icon: "",
+    icon: LOGO_URL,
     title,
     subtitle,
   },
