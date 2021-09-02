@@ -3,7 +3,7 @@ export const errMessages = {
   notFound: "User does not have the recur",
 };
 
-export const LOGO_URL = "https://i.ibb.co/rwDJkXt/appLogo.png"
+export const LOGO_URL = "ic_launcher"
 
 export const actionNotifications = {
   'ADD_RECUR': " just created a new recur",
