@@ -76,6 +76,12 @@ export async function sendTeamCommitNotification(
       .then((user) => {
         const data = user.data();
         if (data) {
+          const settings = data["settings"] || { masterNotificationToggle: true };
+          if (!!settings["masterNotificationToggle"]) {
+            logger.info("skipping sending team commit notification due to setting");
+            return;
+          }
+
           messaging()
             .sendToDevice(
               data.tokens,

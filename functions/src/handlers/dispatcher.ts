@@ -39,6 +39,6 @@ export const fetchCommits = https.onCall(async (data, context) => {
     docs = await (await commits.where("head", ">", head).get()).docs;
   }
 
-  var dataDocs = docs.map(d => d.data());
+  const dataDocs = docs.map(d => d.data());
   return dataDocs;
 });
