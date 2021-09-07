@@ -6,6 +6,7 @@ import {
   addUserAsOwnerToTeam,
   sendTeamCommitNotification,
 } from "../domain/team";
+import { hasUserEnabledNotifications } from "../domain/user";
 import { getUidOrThrowError } from "../utils/handler";
 
 export const onTeamCreate = firestore
@@ -54,6 +55,11 @@ export const nudgeUser = https.onCall(async (data, context) => {
 
   if (!targetUid || !teamName || !currentUserName) {
     return false;
+  }
+
+  if (!(await hasUserEnabledNotifications(targetUid))) {
+    logger.info("Skipping user due to setting");
+    return
   }
 
   try {
