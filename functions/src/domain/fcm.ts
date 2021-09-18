@@ -16,11 +16,20 @@ export const memberAdded = (teamID: string, teamName: string) =>
     { type: "NEW_TEAM", team_id: teamID }
   );
 
-export const nudge = (team: string, currentUser: string) =>
-  notification(
-    `🔔  ${team} 🔔`,
-    `${currentUser} is nudging you to finish all your recurs!`
+export function nudge (team: string, currentUser: string, type: string) {
+  let message;
+  
+  if (type == 'DONE_NUDGE') {
+    message = `Good job completing all recurs for ${team} 💯`
+  } else {
+    message = `We still got recurs to complete for ${team}`
+  }
+
+  return notification(
+    `${currentUser} nudged you 👉`,
+    message,
   );
+}
 
 export const teamAction = (
   author: string,

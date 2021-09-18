@@ -17,12 +17,13 @@ export async function sendMemberAddedNotification(uid: string, teamID: string, t
 export async function sendNudgeNotification(
   uid: string,
   team: string,
-  currentUser: string
+  currentUser: string,
+  type: 'PUSH_NUDGE' | 'DONE_NUDGE',
 ) {
   const user = await firestore().collection("users").doc(uid).get();
   const data = user.data();
   if (data) {
-    await messaging().sendToDevice(data.tokens, fcm.nudge(team, currentUser), {
+    await messaging().sendToDevice(data.tokens, fcm.nudge(team, currentUser, type), {
       priority: "high",
     });
   } else {

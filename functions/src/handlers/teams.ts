@@ -37,7 +37,11 @@ export const onMemberAdd = firestore
         const teamData = team.data();
         const teamID = team.id;
         if (teamData) {
-          return sendMemberAddedNotification(memberData.uid, teamID, teamData.name);
+          return sendMemberAddedNotification(
+            memberData.uid,
+            teamID,
+            teamData.name
+          );
         }
         logger.error("Team data not found", context.params);
         return null;
@@ -51,7 +55,8 @@ export const onMemberAdd = firestore
 export const nudgeUser = https.onCall(async (data, context) => {
   logger.info("Nudging...");
   getUidOrThrowError(context);
-  const { targetUid, teamName, currentUserName } = data;
+  const { targetUid, teamName, currentUserName, type } = data;
+  let notifType = type ?? 'PUSH_NUDGE';
 
   if (!targetUid || !teamName || !currentUserName) {
     return false;
@@ -59,11 +64,11 @@ export const nudgeUser = https.onCall(async (data, context) => {
 
   if (!(await hasUserEnabledNotifications(targetUid))) {
     logger.info("Skipping user due to setting");
-    return
+    return;
   }
 
   try {
-    await sendNudgeNotification(targetUid, teamName, currentUserName);
+    await sendNudgeNotification(targetUid, teamName, currentUserName, notifType);
     return true;
   } catch (err) {
     logger.error("Error while notifying: ", err);
