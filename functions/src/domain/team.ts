@@ -7,7 +7,7 @@ export async function sendMemberAddedNotification(uid: string, teamID: string, t
   const data = user.data();
   if (data) {
     await messaging().sendToDevice(data.tokens, fcm.memberAdded(teamID, teamName), {
-      priority: "high",
+      priority: "normal",
     });
   } else {
     logger.error("User data not found ", uid);
@@ -78,7 +78,7 @@ export async function sendTeamCommitNotification(
         const data = user.data();
         if (data) {
           const settings = data["settings"] || { masterNotificationToggle: true };
-          if (!!settings["masterNotificationToggle"]) {
+          if (!settings["masterNotificationToggle"]) {
             logger.info("skipping sending team commit notification due to setting");
             return;
           }
@@ -87,7 +87,7 @@ export async function sendTeamCommitNotification(
             .sendToDevice(
               data.tokens,
               fcm.teamAction(firstName, action, teamName, teamID),
-              { priority: "high" }
+              { priority: "normal" }
             )
             .catch((err) => logger.error("Error in send to device ", err));
         } else {
